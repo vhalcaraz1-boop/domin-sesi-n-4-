@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dominó Crítico - Pistas Cruzadas</title>
+<style>
+  :root {
+    --bg-color: #0a1f44;
+    --accent: #ffd700;
+    --text: #ffffff;
+    --tile-bg: #ffffff;
+    --tile-text: #0a1f44;
+    --invalid-color: #e74c3c;
+  }
+
+  * {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  body {
+    background: linear-gradient(135deg, #0a1f44 0%, #1e3a6e 100%);
+    color: var(--text);
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  h1 {
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 5px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  .subtitle {
+    color: #c0d4f0;
+    margin-bottom: 20px;
+    text-align: center;
+    max-width: 800px;
+  }
+
+  .score-board {
+    background: rgba(0,0,0,0.3);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 1.2em;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .score-board span {
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .game-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1100px;
+    gap: 20px;
+  }
+
+  /* INDICADOR DE PISTA ACTUAL */
+  .current-hint-box {
+    background: rgba(255, 215, 0, 0.15);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    width: 100%;
+    max-width: 800px;
+    box-shadow: 0 0 20px rgba(255,215,0,0.2);
+    margin-bottom: 10px;
+  }
+
+  .current-hint-title {
+    color: var(--accent);
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .current-hint-text {
+    font-size: 1.2em;
+    font-weight: bold;
+    line-height: 1.4;
+  }
+
+  /* TABLERO DE DOMINÓ */
+  .board-chain {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 20px;
+    border-radius: 15px;
+    min-height: 120px;
+    width: 100%;
+    border: 2px dashed rgba(255,255,255,0.2);
+    align-items: center;
+  }
+
+  .domino-tile {
+    display: flex;
+    background: var(--tile-bg);
+    color: var(--tile-text);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    overflow: hidden;
+    animation: popIn 0.4s ease;
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .domino-half {
+    padding: 10px 15px;
+    width: 170px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.85em;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .domino-half.left {
+    border-right: 2px dashed #ccc;
+    background: #e8f0fe; /* Color ligeramente distinto para respuestas */
+  }
+
+  .domino-half.right {
+    background: #ffffff; /* Color blanco para pistas */
+  }
+
+  /* MANO DEL JUGADOR */
+  .player-hand {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .hand-tile {
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  /* Hover uniforme (no delata la respuesta) */
+  .hand-tile:hover {
+    transform: translateY(-5px);
+  }
+
+  .hand-tile .domino-half {
+    height: 100px;
+    width: 190px;
+    font-size: 0.8em;
+  }
+
+  .controls {
+    margin-top: 15px;
+    display: flex;
+    gap: 15px;
+  }
+
+  .btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .btn-reset {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+
+  .btn-reset:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .message {
+    text-align: center;
+    font-size: 1.1em;
+    min-height: 30px;
+    margin-top: 10px;
+    font-weight: bold;
+    color: var(--invalid-color);
+    max-width: 800px;
+  }
+
+  /* MODAL VICTORIA */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+  }
+
+  .modal-content {
+    background: linear-gradient(135deg, #1e3a6e, #0a1f44);
+    padding: 30px;
+    border-radius: 20px;
+    max-width: 600px;
+    text-align: center;
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 40px rgba(255,215,0,0.3);
+  }
+
+  .modal-content h2 {
+    color: var(--accent);
+    margin-top: 0;
+  }
+
+  .modal-content p {
+    line-height: 1.6;
+    font-size: 1.1em;
+    color: #e0e8f5;
+  }
+
+</style>
+</head>
+<body>
+
+  <h1>🁣 Dominó Crítico: Pistas Cruzadas</h1>
+  <p class="subtitle">Conecta la respuesta de tu ficha con la pista que te da el tablero. ¡Cuidado! Las fichas pueden estar invertidas.</p>
+
+  <div class="score-board">
+    Fichas colocadas: <span id="score">0</span> / 6
+  </div>
+
+  <div class="game-area">
+    
+    <!-- INDICADOR DE LA PISTA A RESOLVER -->
+    <div class="current-hint-box">
+      <div class="current-hint-title">Busca una ficha que responda a esta pista:</div>
+      <div class="current-hint-text" id="currentHintText">Cargando pista...</div>
+    </div>
+
+    <!-- Tablero (La cadena que se va formando) -->
+    <div class="board-chain" id="boardChain">
+      <!-- Aquí se renderizan las fichas jugadas -->
+    </div>
+
+    <!-- Mano del jugador -->
+    <div class="player-hand" id="playerHand">
+      <!-- Aquí se renderizan las fichas disponibles -->
+    </div>
+
+    <div class="message" id="message"></div>
+
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-reset" onclick="resetGame()">🔄 Reiniciar Juego</button>
+  </div>
+
+  <!-- Modal de victoria -->
+  <div class="modal" id="victoryModal">
+    <div class="modal-content">
+      <h2>🎉 ¡Dominó Completado!</h2>
+      <p>Has conectado todas las pistas correctamente. Has demostrado comprender la evolución del marco normativo educativo.</p>
+      <button class="btn btn-reset" onclick="resetGame()" style="margin-top: 15px;">Jugar de Nuevo</button>
+    </div>
+  </div>
+
+<script>
+  // ==========================================
+  // DATOS DEL DOMINÓ (Estructura de Pistas Cruzadas)
+  // left = Respuesta | right = Nueva Pista
+  // ==========================================
+  
+  const dominoData = [
+    {
+      id: 1,
+      leftText: "Ajuste estructural y recortes al gasto educativo",
+      leftConcept: "recortes",
+      rightText: "Lógica que exige a la escuela 'rendir cuentas' y medir resultados.",
+      rightConcept: "rendicion"
+    },
+    {
+      id: 2,
+      leftText: "Evaluación por resultados y eficiencia",
+      leftConcept: "rendicion",
+      rightText: "Acuerdo firmado en 1992 que federalizó la educación básica.",
+      rightConcept: "anmeb"
+    },
+    {
+      id: 3,
+      leftText: "ANMEB (Acuerdo Nacional para la Modernización)",
+      leftConcept: "anmeb",
+      rightText: "Programa creado en 1993 que vinculó el salario a exámenes.",
+      rightConcept: "carrera"
+    },
+    {
+      id: 4,
+      leftText: "Carrera Magisterial",
+      leftConcept: "carrera",
+      rightText: "Organismo autónomo creado en 2002 para evaluar la calidad.",
+      rightConcept: "inee"
+    },
+    {
+      id: 5,
+      leftText: "INEE (Instituto Nacional para la Evaluación)",
+      leftConcept: "inee",
+      rightText: "Pruebas estandarizadas (ENLACE) que generaron tensión.",
+      rightConcept: "pruebas"
+    },
+    {
+      id: 6,
+      leftText: "Sobrecarga administrativa y resistencia sindical",
+      leftConcept: "pruebas", // Conecta con la pista de "pruebas"
+      rightText: "Fin de la cadena. Punto de máxima tensión neoliberal.",
+      rightConcept: "fin"
+    }
+  ];
+
+  // Pista inicial que se muestra en el tablero (El "inicio" de la cadena)
+  const pistaInicial = {
+    leftText: "INICIO",
+    leftConcept: "inicio",
+    rightText: "Crisis económica de 1982 que obligó a recortar el gasto público.",
+    rightConcept: "recortes"
+  };
+
+  let chain = []; 
+  let hand = [];  
+  let currentEndConcept = ""; 
+
+  let audioCtx;
+  function playSound(type) {
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+
+    if(type === 'good') {
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now);
+      osc.frequency.setValueAtTime(600, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if(type === 'bad') {
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+    } else if(type === 'win') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523, now); 
+      osc.frequency.setValueAtTime(659, now + 0.1); 
+      osc.frequency.setValueAtTime(783, now + 0.2);
+      osc.frequency.setValueAtTime(1046, now + 0.3);
+      gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5);
+    }
+  }
+
+  function initGame() {
+    // Barajar mano y reiniciar
+    hand = [...dominoData].sort(() => Math.random() - 0.5);
+    chain = [pistaInicial]; // La primera ficha es la pista inicial
+    currentEndConcept = pistaInicial.rightConcept; 
+    
+    document.getElementById('score').textContent = "0";
+    document.getElementById('message').textContent = "";
+    
+    updateHintBox();
+    render();
+  }
+
+  function updateHintBox() {
+    // Muestra en grande la pista que el jugador debe responder
+    const currentHint = chain[chain.length - 1].rightText;
+    document.getElementById('currentHintText').textContent = `"${currentHint}"`;
+  }
+
+  function render() {
+    const chainEl = document.getElementById('boardChain');
+    const handEl = document.getElementById('playerHand');
+    
+    // Renderizar cadena en el tablero
+    chainEl.innerHTML = '';
+    chain.forEach(tile => {
+      const tileEl = document.createElement('div');
+      tileEl.className = 'domino-tile';
+      
+      let textL = tile.playedReversed ? tile.rightText : tile.leftText;
+      let textR = tile.playedReversed ? tile.leftText : tile.rightText;
+      
+      tileEl.innerHTML = `
+        <div class="domino-half left">${textL}</div>
+        <div class="domino-half right">${textR}</div>
+      `;
+      chainEl.appendChild(tileEl);
+    });
+
+    // Renderizar mano del jugador (todas idénticas visualmente)
+    handEl.innerHTML = '';
+    hand.forEach(tile => {
+      const tileEl = document.createElement('div');
+      tileEl.className = 'domino-tile hand-tile';
+      
+      let textL = tile.leftText;
+      let textR = tile.rightText;
+      
+      tileEl.innerHTML = `
+        <div class="domino-half left">${textL}</div>
+        <div class="domino-half right">${textR}</div>
+      `;
+
+      tileEl.onclick = () => playTile(tile);
+
+      handEl.appendChild(tileEl);
+    });
+  }
+
+  function playTile(tile) {
+    let isValid = false;
+    let playedReversed = false;
+
+    // Validar si la RESPUESTA de la ficha coincide con la PISTA del final de la cadena
+    if (tile.leftConcept === currentEndConcept) {
+      isValid = true;
+      currentEndConcept = tile.rightConcept;
+      playedReversed = false;
+    } 
+    else if (tile.rightConcept === currentEndConcept) {
+      // Si la ficha está invertida, el lado derecho es la respuesta y el izquierdo la nueva pista
+      isValid = true;
+      currentEndConcept = tile.leftConcept;
+      playedReversed = true;
+    }
+
+    if (isValid) {
+      playSound('good');
+      tile.playedReversed = playedReversed;
+      chain.push(tile);
+      hand = hand.filter(t => t.id !== tile.id);
+      
+      document.getElementById('score').textContent = hand.length === 0 ? "6" : (6 - hand.length);
+      
+      render();
+      updateHintBox();
+      
+      if (hand.length === 0) {
+        playSound('win');
+        document.getElementById('currentHintText').textContent = "¡CADENA COMPLETADA!";
+        setTimeout(() => {
+          document.getElementById('victoryModal').style.display = 'flex';
+        }, 500);
+      }
+    } else {
+      playSound('bad');
+      document.getElementById('message').textContent = "❌ Esa ficha no tiene la respuesta correcta. Revisa los textos.";
+      
+      // Efecto visual de error en la pantalla
+      document.body.style.animation = "shake 0.4s";
+      setTimeout(() => document.body.style.animation = "none", 400);
+    }
+  }
+
+  function resetGame() {
+    document.getElementById('victoryModal').style.display = 'none';
+    initGame();
+  }
+
+  // Iniciar
+  initGame();
+
+</script>
+</body>
+</html>
